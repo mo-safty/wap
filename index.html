@@ -553,7 +553,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   });
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-    if (!a || !app.contains(a)) return;
+    if (!a) return; // ملاحظة: الرابط ممكن يكون اتشال من الصفحة بعد إعادة الرسم — نمنع التنقل الحقيقي في كل الأحوال
     var href = a.getAttribute('href') || '';
     if (href === '' || href[0] === '#') {
       var wasPrevented = e.defaultPrevented; e.preventDefault();
