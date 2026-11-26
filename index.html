@@ -245,7 +245,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   var VALID_USER = /^[a-z0-9._-]+(@[a-z0-9.-]+\.[a-z]{2,})?$/;
   var accBusy = false, accTimer = null;
   function syncAccounts() {
-    if (accBusy || !isAdmin) return; accBusy = true;
+    clearTimeout(accTimer); accTimer = null; if (accBusy || !isAdmin) return Promise.resolve(); accBusy = true;
     var O = readState().org || {}, done = {};
     try { done = JSON.parse(lsGet('wap-acc-synced')) || {}; } catch (e) {}
     var todo = [];
@@ -269,7 +269,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         });
       });
     });
-    chain.catch(function (e) { console.warn(e); }).then(function () { accBusy = false; });
+    return chain.catch(function (e) { console.warn(e); }).then(function () { accBusy = false; });
   }
 
   /* ───────────── fake IndexedDB → Supabase Storage ───────────── */
@@ -716,6 +716,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   function logout() {
+    if (accTimer && isAdmin && me) { syncAccounts().then(logout, logout); return; }
     stopLive(); syncReady = false; me = null; isAdmin = false;
     var S = readState(); delete S.session; lsSet(KEY, JSON.stringify(S));
     sb.auth.signOut().catch(function () {});
