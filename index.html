@@ -713,6 +713,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
      (أ) بين الصفحات: عند الخروج من صفحة نحفظ حالتها ومواضع السكرول، وعند الرجوع إليها من الصفحة التي فُتحت منها نعيدهما.
      (ب) داخل نفس الصفحة: لكل «عرض» (قائمة/تفاصيل/تبويب) نحفظ موضع السكرول، ونعيده عند الرجوع لنفس العرض. */
   var navSnap = {}, navSkip = false, navView = {}, navHold = 0;
+  // بعد إعادة تحميل الصفحة (Refresh): نرجع لنفس الصفحة ونفس التبويب ونفس موضع السكرول
+  var navBoot = false, navSaveT = 0;
+  function navPersist() {
+    if (navSaveT) return;
+    navSaveT = setTimeout(function () { navSaveT = 0; try {
+      if (!current || !current.L || !curPage || !me) return;
+      sessionStorage.setItem('wap-nav', JSON.stringify({ p: curPage, u: me.id || '', t: Date.now(), state: navCopy(current.L.state), init0: current.__init0 || {}, scroll: navScrollers().map(function (x) { return { path: x.path, pos: x.get() }; }) }));
+    } catch (e) {} }, 250);
+  }
   function navCopy(o) { var out = {}; Object.keys(o || {}).forEach(function (k) { var v = o[k]; if (typeof v === 'function') return; try { out[k] = v == null ? v : JSON.parse(JSON.stringify(v)); } catch (e) {} }); return out; }
   function navSame(a, b) { try { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); } catch (e) { return false; } }
   function navPath(el) { var p = []; while (el && el !== app && el.parentNode) { p.unshift(Array.prototype.indexOf.call(el.parentNode.children, el)); el = el.parentNode; } return p.join('.'); }
@@ -740,6 +749,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function navAfterRender() {
     try {
       if (!curPage) return;
+      navPersist();
       navScrollers().forEach(function (x) {
         var root = navRoot(x); var sig = navSig(root); var key = curPage + '#' + x.path; var st = navView[key] || (navView[key] = { sig: sig, pos: {} });
         if (st.sig === sig) return;
@@ -758,6 +768,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       var sig = navSig(root); if (!st) st = navView[key] = { sig: sig, pos: {} };
       if (st.sig !== sig) return; // العرض اتغير ولسه ما اتسجلش: لا نكتب فوق موضع العرض القديم
       st.pos[sig] = isWin ? (window.scrollY || 0) : t.scrollTop;
+      navPersist();
     } catch (err) {}
   }, true);
   window.WAP_NAV = { fresh: function () { navSkip = true; } };
@@ -769,7 +780,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       var prevPage = curPage, R = null;
       try {
         if (current && current.L && prevPage && prevPage !== name) navSnap[prevPage] = { to: name, state: navCopy(current.L.state), init0: current.__init0 || {}, scroll: navScrollers().map(function (x) { return { path: x.path, pos: x.get() }; }) };
-        var sn = navSnap[name]; if (sn && sn.to === prevPage && !navSkip) R = sn; delete navSnap[name]; navSkip = false; if (!R) Object.keys(navView).forEach(function (k) { if (k.indexOf(name + '#') === 0) delete navView[k]; });
+        var sn = navSnap[name]; if (sn && sn.to === prevPage && !navSkip) R = sn; delete navSnap[name]; navSkip = false; if (navBoot) { navBoot = false; if (!R) { try { var b = JSON.parse(sessionStorage.getItem('wap-nav') || 'null'); if (b && b.p === name && b.u === ((me && me.id) || '') && Date.now() - b.t < 12 * 3600000) R = b; } catch (e2) {} } } if (!R) Object.keys(navView).forEach(function (k) { if (k.indexOf(name + '#') === 0) delete navView[k]; });
       } catch (e) { R = null; }
       curPage = name; navN++;
       document.body.className = 'pg';
@@ -952,12 +963,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     var home = acc ? acc.route : 'OMTeam';
     var want = new URLSearchParams(location.search).get('p');
     var page = !fresh && want && want !== 'Login' ? want : home;
+    navBoot = !fresh;
     showPage(page, 'replace');
   }
 
   function logout() {
     if (accTimer && isAdmin && me) { syncAccounts().then(logout, logout); return; }
     stopLive(); syncReady = false; me = null; isAdmin = false;
+    try { sessionStorage.removeItem('wap-nav'); } catch (e) {}
     var S = readState(); delete S.session; lsSet(KEY, JSON.stringify(S));
     sb.auth.signOut().catch(function () {});
     history.replaceState({}, '', location.pathname);
