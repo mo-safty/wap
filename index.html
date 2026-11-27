@@ -854,6 +854,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   /* ───────────── login / import screens ───────────── */
+  // وضع التجربة: خانتا اسم المستخدم وكلمة المرور تبدآن فاضيتين بعد تسجيل الخروج، بدون تعبئة تلقائية من المتصفح.
+  // بعد انتهاء التجربة: اجعلها false ليرجع السلوك العادي (تذكّر الاسم + تعبئة المتصفح).
+  var LOGIN_EMPTY_TEST = true;
   var loginState = { user: '', pass: '', err: '', busy: false };
   function LoginView() {
     var st = loginState;
@@ -876,9 +879,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         h('img', { src: LOGO, alt: 'WAP', class: 'logo' }),
         h('p', { class: 'sub' }, 'WAP Operation'),
         h('label', null, 'اسم المستخدم',
-          h('input', { class: 'in', dir: 'ltr', autocapitalize: 'none', autocomplete: 'username', spellcheck: false, value: st.user, placeholder: 'Name.HS@wap.app', onInput: function (e) { loginState.user = e.target.value; loginState.err = ''; } })),
+          h('input', { class: 'in', dir: 'ltr', autocapitalize: 'none', autocomplete: LOGIN_EMPTY_TEST ? 'off' : 'username', name: LOGIN_EMPTY_TEST ? 'wap-u-' + navN : undefined, readOnly: LOGIN_EMPTY_TEST ? true : undefined, onFocus: LOGIN_EMPTY_TEST ? function (e) { e.target.readOnly = false; } : undefined, spellcheck: false, value: st.user, placeholder: 'Name.HS@wap.app', onInput: function (e) { loginState.user = e.target.value; loginState.err = ''; } })),
         h('label', null, 'كلمة المرور',
-          h('input', { class: 'in', dir: 'ltr', type: 'password', autocomplete: 'current-password', value: st.pass, onInput: function (e) { loginState.pass = e.target.value; loginState.err = ''; } })),
+          h('input', { class: 'in', dir: 'ltr', type: 'password', autocomplete: LOGIN_EMPTY_TEST ? 'new-password' : 'current-password', name: LOGIN_EMPTY_TEST ? 'wap-p-' + navN : undefined, readOnly: LOGIN_EMPTY_TEST ? true : undefined, onFocus: LOGIN_EMPTY_TEST ? function (e) { e.target.readOnly = false; } : undefined, value: st.pass, onInput: function (e) { loginState.pass = e.target.value; loginState.err = ''; } })),
         st.err ? h('p', { class: 'err' }, st.err) : null,
         h('button', { class: 'go', type: 'submit', disabled: st.busy }, st.busy ? 'جارٍ الدخول…' : 'دخول')));
   }
@@ -975,6 +978,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     sb.auth.signOut().catch(function () {});
     history.replaceState({}, '', location.pathname);
     loginState.busy = false; loginState.err = '';
+    if (LOGIN_EMPTY_TEST) { loginState.user = ''; loginState.pass = ''; }
     renderLogin();
   }
 
