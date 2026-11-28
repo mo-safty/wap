@@ -147,7 +147,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         var i = k.indexOf('|'); if (i < 0) return; var id = k.slice(0, i), d = k.slice(i + 1), L = last[id];
         if (!L || !/^\d{4}-\d\d-\d\d$/.test(d) || d > today || d <= L.A.date) return;
         if ((S.starts || {})[id] || ((S.status || {})[id] || 'today') !== 'today') return;
-        var conf = Object.keys(gc2).some(function (g) { var x = /^d\d+-(.+)$/.exec(g); return x && x[1] === id; }) || (S.manual || []).some(function (m) { return m.id === id && gc2[m.key]; });
+        var conf = Object.keys(gc2).some(function (g) { var x = /^d(\d+)-(.+)$/.exec(g); return x && x[2] === id && archIso(Date.now() + (+x[1]) * 864e5) === d; }) || (S.manual || []).some(function (m) { return m.id === id && gc2[m.key] && m.date === d; });
         if (conf) return;
         var A2 = Object.assign({}, L.A); A2.chat = Object.assign({}, A2.chat || {}); A2.chat[k] = S.chat[k];
         S[L.ak] = Object.assign({}, S[L.ak]); S[L.ak][L.aid] = A2;
