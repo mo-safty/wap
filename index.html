@@ -119,7 +119,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       });
       if (S.chat && typeof S.chat === 'object') {
         var ck = null;
-        Object.keys(S.chat).forEach(function (k) { if (k.indexOf(id + '|') !== 0) return; var d = k.slice(id.length + 1); if (d <= hdate || (old.man && d === old.man.date)) { chat[k] = S.chat[k]; ck = ck || Object.assign({}, S.chat); delete ck[k]; } });
+        Object.keys(S.chat).forEach(function (k) { if (k.indexOf(id + '|') !== 0) return; var d = k.slice(id.length + 1); if (d <= today || (old.man && d === old.man.date)) { chat[k] = S.chat[k]; ck = ck || Object.assign({}, S.chat); delete ck[k]; } });
         if (ck) S.chat = ck;
       }
       var lk = old.key, nk = lk + '@' + hdate, L = Object.assign({}, S.laundry || {}), rec = L[lk];
@@ -139,6 +139,21 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       S[ak][aid] = { aid: aid, key: old.key, unit: id, apt: apt, date: hdate, hts: h.ts, kind: kind, type: row.type, src: row.src, client: row.client, row: row, manual: old.man || null, data: data, chat: chat, lau: (rec || kind !== 'res') ? nk : '' };
       changed = true;
     });
+    // رسائل قديمة بقيت على وحدة أُرشفت تذكرتها (مفتاح بتاريخ لاحق) ولا توجد عليها تذكرة مؤكدة: تُنقل إلى أرشيف تذكرتها
+    if (S.chat && typeof S.chat === 'object') {
+      var gc2 = S.grConfirm || {}, last = {};
+      Object.keys(S).forEach(function (ak) { if (ak.indexOf('arch-') !== 0 || !S[ak]) return; Object.keys(S[ak]).forEach(function (aid) { var A = S[ak][aid]; if (A && A.unit && (!last[A.unit] || (A.hts || 0) > (last[A.unit].A.hts || 0))) last[A.unit] = { ak: ak, aid: aid, A: A }; }); });
+      Object.keys(S.chat).forEach(function (k) {
+        var i = k.indexOf('|'); if (i < 0) return; var id = k.slice(0, i), d = k.slice(i + 1), L = last[id];
+        if (!L || !/^\d{4}-\d\d-\d\d$/.test(d) || d > today || d <= L.A.date) return;
+        if ((S.starts || {})[id] || ((S.status || {})[id] || 'today') !== 'today') return;
+        var conf = Object.keys(gc2).some(function (g) { var x = /^d\d+-(.+)$/.exec(g); return x && x[1] === id; }) || (S.manual || []).some(function (m) { return m.id === id && gc2[m.key]; });
+        if (conf) return;
+        var A2 = Object.assign({}, L.A); A2.chat = Object.assign({}, A2.chat || {}); A2.chat[k] = S.chat[k];
+        S[L.ak] = Object.assign({}, S[L.ak]); S[L.ak][L.aid] = A2;
+        var c3 = Object.assign({}, S.chat); delete c3[k]; S.chat = c3; changed = true;
+      });
+    }
     return changed;
   }
   function archTick() { try { var S = readState(); if (archPass(S)) LS.setItem(KEY, JSON.stringify(S)); } catch (e) { console.warn('arch', e); } }
